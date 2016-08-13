@@ -1,0 +1,818 @@
+' Gambas class file
+
+' FindFiles
+' FindFiles is designed to quickly locate your files
+' 
+' Copyright (C) Charlie Ogier
+'
+' This program is free software; you can redistribute it and/or modify
+' it under the terms of the GNU General Public License as published by
+' the Free Software Foundation; either version 2 of the License, or
+' (at your option) any later version.
+'
+' This program is distributed in the hope that it will be useful,
+' but WITHOUT ANY WARRANTY; without even the implied warranty of
+' MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+' GNU General Public License for more details.
+'
+' You should have received a copy of the GNU General Public License
+' along with this program; if not, write to the Free Software
+' Foundation, Inc., 51 Franklin St, Fifth Floor, 
+' Boston, MA  02110-1301  USA
+
+' 19/02/15 Start of complete rewrite of Findfiles V2.0.0
+' 11/03/15 1st release v2.0.15
+' 20/03/15 Created a workaround To a possible bug In the Shell(String) command regarding apostrophes (Confirmed as a bug by Benoît Minisini) V2.0.16
+' 24/03/15 Fixed bug, was doing a complete log on initial startup instead of just on the home folder V2.0.17/.18
+' 09/04/15 Added version number to help class V2.0.19
+' 19/04/15 Added Icons to the Forms which creates the 'Taskbar' icons, thanks to the WhiteIslandSoftware Forum for this V2.0.20
+' 19/09/15 Added a 'Copy' to clipboard option to the Right Hand Click menu V 2.0.21
+
+Public sVersion As String = "Version 2.0.21" ' Program version number
+Public sPath As String = "~/.FFdatabase" ' The data path
+Public sFiles1 As String = "FF1.txt" ' File to store the computer files
+Public sFiles2 As String = "FF2.txt" ' File to store the computer files
+Public sFindWhat As String ' To find either just the home folder or all
+Public sFileStats As String ' File stats
+Public stFileInfo As Stat ' File Stats
+Public sNumAttrib As String ' To store the file permission attributes as numbers e.g. 777
+Public bStopClick As Boolean ' To stop unsetting the checkbox from setting it
+Public bExitDelay As Boolean ' To delay closing the program until logging is complete
+Public iFileCounter As Integer ' How many files were logged
+Public iFilePosition As Integer ' To hold the present scroll position
+Public iFoundCounter As Integer ' How many files found
+Public siTimer2Count As Short ' Timer counter for loss of focus on TextBoxFind1
+Public sWhichTerminal As String ' String to open a terminal
+Public sTerminalString As String ' String to setup Terminal
+Public bScrollBarTrigger As Boolean ' To prevent the scrollbar movement recalling the movement subroutine
+Public sAll As New String[10000000] ' To hold list of files
+Public sFind As New String[10000000] ' To hold list of found files 
+Public sFind2 As New String[10000000] ' To hold list of found files for 2nd search
+
+Public Sub _new()
+
+If Not Exist(sPath) Then Mkdir sPath
+Notify
+SetUpSettings
+WhichTerminal
+LogTheFiles
+LoadFilesData
+
+End
+
+Public Sub Form_Open()
+
+Me.Center
+CheckBoxCase_Click
+SearchTheData
+
+End
+
+Public Sub SearchTheData()
+Dim sFindString As String
+Dim iCount1, iCount2, iCount3, iCount4 As Integer
+Dim siFindStart, siFindEnd As Short 
+
+ScrollBarMain.value = 0
+TextBoxFind1.SetFocus
+ClearSearchArea
+ClearsFindVariable
+ClearsFind2Variable
+ClearToolTips
+
+If Not Trim(TextBoxFind1.text) Then 
+  sFindString = "/"
+Else
+  sFindString = Trim(TextBoxFind1.Text)
+End If
+
+'1st Search
+
+siFindEnd = Len(sFindString)
+
+For iCount1 = 0 To iFileCounter
+  If CheckBoxHideSystem.value = False Then
+    If Not InStr(sAll[iCount1], "/home/") Then Continue
+  Endif
+
+  If CheckBoxHideFiles.Value = False Then 'Hide hidden files and folders
+    If InStr(sAll[iCount1], "/.") Then Continue
+  End If
+
+  If CheckBoxCase.value = True Then 
+    siFindStart = InStr(sAll[iCount1], sFindString)
+  Else
+    siFindStart = InStr(UCase(sAll[iCount1]), UCase(sFindString))
+  Endif
+
+  If siFindStart Then
+    sFind[iCount2] = sAll[iCount1]
+    If siFindEnd > 1 Then
+      sFindString = Mid(sFind[iCount2], siFindStart, siFindEnd)
+      sFind[iCount2] = Mid(sFind[iCount2], 1, siFindStart - 1) & "<b>" & sFindString & "</b>" & Mid(sFind[iCount2], siFindStart + siFindEnd)
+    Endif
+    Inc iCount2
+  End If 
+Next
+
+'2nd Search
+
+iFoundCounter = iCount2
+
+If Trim(TextBoxFind2.text) Then
+  sFindString = Trim(TextBoxFind2.Text)
+  siFindEnd = Len(sFindString)
+
+  For iCount3 = 0 To iCount2
+    If CheckBoxCase.value = True Then
+      siFindStart = InStr(sFind[iCount3], sFindString)
+    Else
+      siFindStart = InStr(UCase(sFind[iCount3]), UCase(sFindString))
+    End If
+      If siFindStart Then
+        sFind2[iCount4] = sFind[iCount3]
+          If siFindEnd > 1 Then 
+            sFindString = Mid(sFind2[iCount4], siFindStart, siFindEnd)
+            sFind2[iCount4] = Mid(sFind2[iCount4], 1, siFindStart - 1) & "<b>" & sFindString & "</b>" & Mid(sFind2[iCount4], siFindStart + siFindEnd)
+          Endif
+        Inc iCount4
+      Endif
+    Next
+  ClearsFindVariable
+  CopysFind2TosFind(iCount4)
+  iFoundCounter = iCount4
+Endif
+
+iFilePosition = 0
+DisplayTheData
+
+End
+
+Public Sub CopysFind2TosFind(iCount3 As Integer)
+Dim iCount As Integer
+
+For iCount = 0 To iCount3
+  sFind[iCount] = sFind2[iCount]
+Next
+
+End
+
+Public Sub DisplayTheData()
+Dim iCount As Integer
+
+If TextBoxFind1.text Then
+  If iFoundCounter > 1 Then LabelTotalFoundFiles.text = Str(iFoundCounter) & " matches found"
+  If iFoundCounter = 1 Then LabelTotalFoundFiles.text = Str(iFoundCounter) & " match found"
+  If iFoundCounter = 0 Then 
+    LabelTotalFoundFiles.text = "No match found"
+    ScrollBarMain.Visible = False
+    Return
+  Endif
+Endif
+
+If iFilePosition > iFoundCounter - 10 Then iFilePosition = iFoundCounter - 10
+If iFilePosition < 0 Then iFilePosition = 0
+
+If iFoundCounter > 10 Then 
+  LabelShowing.text = "Displaying files " & Str(iFilePosition + 1) & " to " & Str(iFilePosition + 10) & " of " & Str(iFoundCounter)
+  ScrollBarMain.Visible = True
+Else
+  ScrollBarMain.Visible = False
+  LabelShowing.text = ""
+Endif
+
+TextLabelDisplay0.Text = sFind[iFilePosition + iCount]
+TextLabelDisplay0.ToolTip = GetFileStats(sFind[iFilePosition + iCount])
+TextLabelDisplay1.Text = sFind[iFilePosition + (iCount + 1)]
+TextLabelDisplay1.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 1)])
+TextLabelDisplay2.Text = sFind[iFilePosition + (iCount + 2)]
+TextLabelDisplay2.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 2)])
+TextLabelDisplay3.Text = sFind[iFilePosition + (iCount + 3)]
+TextLabelDisplay3.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 3)])
+TextLabelDisplay4.Text = sFind[iFilePosition + (iCount + 4)]
+TextLabelDisplay4.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 4)])
+TextLabelDisplay5.Text = sFind[iFilePosition + (iCount + 5)]
+TextLabelDisplay5.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 5)])
+TextLabelDisplay6.Text = sFind[iFilePosition + (iCount + 6)]
+TextLabelDisplay6.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 6)])
+TextLabelDisplay7.Text = sFind[iFilePosition + (iCount + 7)]
+TextLabelDisplay7.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 7)])
+TextLabelDisplay8.Text = sFind[iFilePosition + (iCount + 8)]
+TextLabelDisplay8.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 8)])
+TextLabelDisplay9.Text = sFind[iFilePosition + (iCount + 9)]
+TextLabelDisplay9.ToolTip = GetFileStats(sFind[iFilePosition + (iCount + 9)])
+
+LabelTotalFiles.text = Str(iFileCounter) & " files logged"
+
+End
+
+Public Sub ScrollBarMain_Change()
+
+If bScrollBarTrigger Then
+  bScrollBarTrigger = False
+  Return
+Else
+  iFilePosition = (iFoundCounter / 100) * ScrollBarMain.Value
+  DisplayTheData
+End If
+  
+End
+
+Public Sub LoadFilesData()
+Dim hFile As File
+Dim iCount As Integer
+
+hFile = Open sPath &/ sFiles1 For Input
+
+While Not Eof(hfile)
+  Line Input #hFile, sAll[iCount]
+  Inc iCount
+Wend
+
+iFileCounter = iCount
+
+End
+
+Public Sub FileSort()
+Dim sTemp As New String[iFileCounter + 1]
+Dim iCount As Integer
+
+Stop
+For iCount = 0 To iFileCounter
+  sTemp[iCount] = sAll[iCount]
+Next
+
+sTemp.Sort(gb.Natural)
+
+For iCount = 0 To iFileCounter
+  sAll[iCount] = sTemp[iCount]
+Next
+
+End
+
+Public Sub LogTheFiles()
+Dim sFileLock1 As String = ";echo $? > " & sPath &/ "FF_1.ff"
+Dim sFileLock2 As String = ";echo $? > " & sPath &/ "FF_2.ff"
+Dim sSort As String = "| sort > "
+
+If CheckBoxHideSystem.value = True Then
+  sFindWhat = "find / "
+Else
+  sFindWhat = "find ~/ "
+Endif
+
+If Not Exist(sPath &/ "FF_1.ff") & Not Exist(sPath &/ "FF_2.ff") Then
+  Try Kill sPath &/ sFiles1
+  Try Kill sPath &/ sFiles2
+Endif
+
+If Exist(sPath &/ sFiles2) And Exist(sPath &/ "FF_2.ff") Then
+  Try Kill sPath &/ sFiles1
+  Try Kill sPath &/ "FF_2.ff"
+  Move sPath &/ sFiles2 To sPath &/ sFiles1
+Else
+  If Not Exist(spath &/ "FF_2.ff") Then
+    Try Kill sPath &/ sFiles2
+    Try Kill sPath &/ "FF_2.ff"
+  Endif
+Endif
+
+If Not Exist(sPath &/ sFiles1) Then
+  Try Kill sPath &/ "FF_1.ff"
+  Shell sFindWhat & " > " & sPath &/ sFiles1 & sFileLock1 Wait  'Log files
+  Try Kill sPath &/ "FF_2.ff"
+  Shell sFindWhat & sSort & sPath &/ sFiles2 & sFileLock2 ' Create new database in the background
+Else
+  Try Kill sPath &/ "FF_2.ff"
+  Shell sFindWhat & sSort & sPath &/ sFiles2 & sFileLock2 ' Create new database in the background
+End If
+
+End
+
+Public Sub gTextLabelDisplayHandle_Mousewheel()
+
+UpdateScreenDisplay
+
+End
+
+Public Sub gTextLabelDisplayHandle_dblClick()
+
+sTerminalString = Last.Text
+ToOpenFile_Click
+
+End
+
+Public Sub gTextLabelDisplayHandle_MouseDown()
+
+sTerminalString = Last.Text
+If Mouse.Right Then mnuPopUp.Popup
+
+End
+
+Public Sub UpdateScreenDisplay()
+
+If iFoundCounter < 11 Then Return
+
+Select Case Mouse.Delta
+  Case 1 
+    Dec iFilePosition 
+  Case -1 
+    Inc iFilePosition
+End Select
+
+bScrollBarTrigger = True
+DisplayTheData
+
+ScrollBarMain.value = 100 - ((iFoundCounter - 10) - iFilePosition) / (iFoundCounter - 10) * 100
+
+End
+
+Public Sub TextBoxFind1_KeyRelease() ' Checks for various keys being pressed
+
+If Key.Code = Key.Enter Or Key.code = Key.Return Then SearchTheData
+
+If Trim(TextBoxFind1.text) <> "" Then
+  TextBoxFind2.Enabled = True
+Else
+  TextBoxFind2.Enabled = False
+  TextBoxFind2.text = ""
+Endif
+  
+End
+
+Public Sub TextBoxFind2_KeyRelease()
+
+TextBoxFind1_KeyRelease
+
+End
+
+Public Sub TextBoxFind1_KeyPress()
+
+If Key.Code = Key.PageUp Then 
+  iFilePosition -= 10
+  DisplayTheData
+Endif
+
+If Key.Code = Key.PageDown Then 
+  iFilePosition += 10
+  DisplayTheData
+Endif
+
+End
+
+Public Sub TextBoxFind2_KeyPress()
+
+TextBoxFind1_KeyPress
+
+End
+
+Public Sub ClearSearchArea()
+
+TextLabelDisplay0.Text = ""
+TextLabelDisplay1.Text = ""
+TextLabelDisplay2.Text = ""
+TextLabelDisplay3.Text = ""
+TextLabelDisplay4.Text = ""
+TextLabelDisplay5.Text = ""
+TextLabelDisplay6.Text = ""
+TextLabelDisplay7.Text = ""
+TextLabelDisplay8.Text = ""
+TextLabelDisplay9.Text = ""
+
+End
+
+Public Sub ClearsFindVariable()
+Dim iCount As Integer
+
+  For iCount = 0 To iFileCounter
+    sFind[iCount] = ""
+  Next
+
+End
+
+Public Sub ClearsFind2Variable()
+Dim iCount As Integer
+
+  For iCount = 0 To iFileCounter
+    sFind2[iCount] = ""
+  Next
+
+End
+
+Public Sub File_Manager_Click()
+Dim FindStat As Stat
+Dim siCount As Short
+
+sTerminalString = Replace(sTerminalString, "<b>", "")
+sTerminalString = Replace(sTerminalString, "</b>", "")
+Try FindStat = Stat(sTerminalString)
+
+If FindStat.Type = "1" Then 'It's a file not a directory
+  For siCount = Len(sTerminalString) To 1 Step -1
+    If Mid(sTerminalString, siCount, 1) = "/" Then 
+      sTerminalString = Mid(sTerminalString, 1, siCount - 1)
+      Break
+    End If
+  Next
+End If
+
+sTerminalString = Shell$(sTerminalString)
+Shell "xdg-open " & sTerminalString
+
+End
+
+Public Sub ToOpenFile_Click()
+
+sTerminalString = Replace(sTerminalString, "<b>", "")
+sTerminalString = Replace(sTerminalString, "</b>", "")
+sTerminalString = Shell(sTerminalString)
+sTerminalString = Replace(sTerminalString, "''", "'\\''") ' catches the apostrophe which is not handled well by the Shell(String) command
+Shell "xdg-open " & sTerminalString
+
+End
+
+Public Sub Open_in_Terminal_Click()
+Dim FindStat As Stat
+Dim siCount As Short
+
+sTerminalString = Replace(sTerminalString, "<b>", "")
+sTerminalString = Replace(sTerminalString, "</b>", "")
+FindStat = Stat(sTerminalString)
+
+If FindStat.Type = "1" Then 'It's a file not a directory
+  For siCount = Len(sTerminalString) To 1 Step -1
+    If Mid(sTerminalString, siCount, 1) = "/" Then 
+      sTerminalString = Mid(sTerminalString, 1, siCount - 1)
+      Break
+    End If
+  Next
+End If
+
+sTerminalString = Shell$(sTerminalString)
+sTerminalString = sWhichTerminal & sTerminalString
+Shell sTerminalString
+
+End
+
+Public Sub mnuCopy_click()
+
+sTerminalString = Replace(sTerminalString, "<b>", "")
+sTerminalString = Replace(sTerminalString, "</b>", "")
+Clipboard.Copy(sTerminalString)
+
+End
+
+Public Sub ButtonClear_Click()
+
+TextBoxFind1.text = ""
+TextBoxFind2.text = ""
+TextBoxFind1.SetFocus
+SearchTheData
+
+End
+
+Public Sub CheckBoxCase_Click()
+
+If CheckBoxCase.value = True Then
+  CheckBoxCase.Tooltip = "Click to search without case being sensitive"
+Else
+  CheckBoxCase.Tooltip = "Click to search with case being sensitive"
+Endif
+
+TextBoxFind1.SetFocus
+SaveSettings
+SearchTheData
+
+End
+
+Public Sub ButtonSearch_Click()
+
+SearchTheData
+
+End
+
+Public Sub Form_Close()
+
+If Exist(sPath &/ "FindFiles2.txt") Then
+  Try Kill sPath &/ "FindFiles1.txt"
+    Move sPath &/ "FindFiles2.txt" To sPath &/ "FindFiles1.txt"
+  Endif
+
+End
+
+Public Sub CheckBoxHideFiles_Click()
+
+SaveSettings
+SearchTheData
+
+End
+
+Public Sub CheckBoxHideSystem_Click()
+Dim siAnswer As Short
+Dim bHoldCheck As Boolean
+
+bHoldCheck = CheckBoxHideSystem.Value
+
+If bStopClick Then
+  bStopClick = False
+  Return
+Endif
+
+siAnswer = Message.Warning("This will require a relog which may take some time\nexpecially if you are changing to showing system files and you have\nSamba shares or other mounted drives", "Cancel", "OK")
+
+If siAnswer = 2 Then
+  Try Kill sPath &/ sFiles1
+  Try Kill sPath &/ sFiles2
+  Try Kill sPath &/ "FF_1.ff"
+  Try Kill sPath &/ "FF_2.ff"
+  SaveSettings
+  LogTheFiles
+  LoadFilesData
+  SearchTheData
+Else
+  bStopClick = True
+  If bHoldCheck = True Then 
+    CheckBoxHideSystem.Value = False
+  Else
+    CheckBoxHideSystem.Value = True
+  End If
+End If
+
+End
+
+Public Sub GetFileStats(sFileName As String) As String
+Dim sDate, sFileSizeString, sFileNameStatsString As String
+Dim siCount, siSizeSelect As Short
+Dim vFilesize2 As Variant
+Dim lFileSize As Long
+
+sFileName = Replace(sFileName, "<b>", "")
+sFileName = Replace(sFileName, "</b>", "")
+
+Try stFileInfo = Stat(sFileName)
+
+For siCount = Len(sFileName) To 1 Step -1 'Reduce file name string to file name only
+  If Mid(sFileName, siCount, 1) = "/" Then 
+    sFileName = Mid(sFileName, siCount + 1)
+    Break
+  Endif
+Next
+
+sFileNameStatsString = sFileName
+If Len(sFileNameStatsString) > 40 Then sFileNameStatsString = "..." & Right(sFileNameStatsString, 40)
+
+sFileStats = "Double click to open file\nRight click for more\nUse mouse wheel to scroll\n\n" '
+
+If Len(sFileName) > 0 Then ' No file name = no toolbar tip!
+  sFileStats &= "File - " & sFileNameStatsString & "\n" ' File name 
+Else
+  Return
+End If
+
+sFileStats &= "User - " & stFileInfo.User & "\n" ' User
+sFileStats &= "Attributes - " & stFileInfo.Auth ' Attributes
+
+FileAttributeNumbers ' Get the file attribute permissions as numbers
+sFileStats &= " (" & sNumAttrib & ")\n" ' Attributes as numbers e.g. 777
+sFileStats &= "Group - " & stFileInfo.Group & "\n" ' Group name
+
+If stFileInfo.Hidden Then ' Is file hidden
+  sFileStats &= "Hidden - True\n"
+Else
+  sFileStats &= "Hidden - False\n"
+End If 
+
+sDate = stFileInfo.LastModified ' When the file was last modified
+sDate = DateSort(sDate) 'Change the date to full World format
+
+sFileStats &= "Last modified - " & sDate & "\n"
+
+lFileSize = stFileInfo.Size
+
+siSizeSelect = 0 ' bytes
+If lFileSize > 999 Then siSizeSelect = 1 ' kB
+If lFileSize > 999999 Then siSizeSelect = 2 ' MB
+If lFileSize > 999999999 Then siSizeSelect = 3 ' GB
+
+Select Case siSizeSelect
+  Case 3
+    lFileSize = lFileSize / 10000000
+    vFilesize2 = lFileSize / 100
+    sFileSizeString = " GB"
+  Case 2
+    lFileSize = lFileSize / 10000
+    vFilesize2 = lFileSize / 100
+    sFileSizeString = " MB"
+  Case 1
+    lFileSize = lFileSize / 10
+    vFilesize2 = lFileSize / 100
+    sFileSizeString = " kB"
+  Case Else
+    vFilesize2 = lFileSize
+    sFileSizeString = " bytes"
+End Select
+
+sFileStats &= "File size - " & vFilesize2 & sFileSizeString
+
+Return sFileStats
+
+End
+
+Public Sub DateSort(sDate As String) As String ' Convert date to format: - 31st December 2013
+Dim sMonths As String[]
+Dim siDate As Short
+Dim sDay, sDateExt, sMonth, sYear As String
+
+sDay = Day(sdate)
+sMonth = Month(sdate)
+sYear = Year(sdate)
+siDate = Val(sMonth)
+sMonths = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+sMonth = sMonths[siDate]
+siDate = Val(sDay)
+
+Select Case siDate
+  Case 1, 21, 31
+    sDateExt = "st"
+  Case 2, 22
+    sDateExt = "nd"
+  Case 3, 23
+    sDateExt = "rd"
+  Case Else
+    sDateExt = "th"
+End Select
+
+sDate = sDay & sDateExt & " " & sMonth & " " & sYear
+
+Return sDate
+
+End
+
+Public Sub FileAttributeNumbers() ' Gets the numbers for the file attributes e.g 777
+Dim sHoldAttrib As String
+Dim siCount As Short
+Dim siTNum As New Short[]
+
+sHoldAttrib = stFileInfo.Auth
+siTNum = [0, 4, 2, 1, 4, 2, 1, 4, 2, 1]
+
+For siCount = 1 To 9
+  If Mid(sHoldAttrib, siCount, 1) = "-" Then siTNum[siCount] = 0
+Next
+
+siTNum[1] = siTNum[1] + siTNum[2] + siTNum[3]
+siTNum[2] = siTNum[4] + siTNum[5] + siTNum[6]
+siTNum[3] = siTNum[7] + siTNum[8] + siTNum[9]
+sNumAttrib = Str(siTNum[1]) & Str(siTNum[2]) & Str(siTNum[3])
+
+End
+
+Public Sub ClearToolTips()
+
+TextLabelDisplay0.Tooltip = ""
+TextLabelDisplay1.Tooltip = ""
+TextLabelDisplay2.Tooltip = ""
+TextLabelDisplay3.Tooltip = ""
+TextLabelDisplay4.Tooltip = ""
+TextLabelDisplay5.Tooltip = ""
+TextLabelDisplay6.Tooltip = ""
+TextLabelDisplay7.Tooltip = ""
+TextLabelDisplay8.Tooltip = ""
+TextLabelDisplay9.Tooltip = ""
+
+End
+
+Public Sub Timer1_Timer()
+
+If Exist(sPath &/ "FF_2.ff") Then
+  FileUpdate
+  If bExitDelay Then Quit
+Endif
+
+End
+
+Public Sub FileUpdate()
+Dim stTemp1, stTemp2 As Stat
+Dim sTemp1, sTemp2 As String
+
+stTemp1 = Stat(sPath &/ sFiles1)
+stTemp2 = Stat(sPath &/ sFiles2)
+sTemp1 = stTemp1.LastModified
+sTemp2 = stTemp2.LastModified
+sTemp1 = DateSort(Mid(sTemp1, 1, 10)) & Right(sTemp1, 9)
+sTemp2 = DateSort(Mid(sTemp2, 1, 10)) & Right(sTemp2, 9)
+
+ButtonUpdate.Visible = True
+ButtonUpdate.Text = "&Database update"
+ButtonUpdate.Tooltip = "The data being used is from " & sTemp1 & "\nyou can update to data from " & sTemp2
+
+End
+
+Public Sub WhichTerminal()
+
+'Tested
+sWhichTerminal = "gnome-terminal --working-directory=" 'Gnome and Cinnamon (tested on Cinnamon not Gnome)
+If Exist("/usr/bin/konsole") Then sWhichTerminal = "konsole --workdir " 'KDE
+If Exist("/usr/bin/lxterminal") Then sWhichTerminal = "lxterminal --working-directory=" 'LXDE
+If Exist("/usr/bin/mate-terminal") Then sWhichTerminal = "mate-terminal --working-directory=" 'Mate
+If Exist("/usr/bin/xfce4-terminal") Then sWhichTerminal = "xfce4-terminal --working-directory=" 'XFCE4
+
+'Not tested
+If Exist("/usr/bin/terminal") Then sWhichTerminal = "terminal --working-directory=" 'XFCE
+
+End
+
+Public Sub Notify()
+Dim sNotify As String
+
+If Not Exist(sPath &/ "findfiles.png") Then Copy "findfiles.png" To sPath &/ "findfiles.png"
+
+sNotify = "notify-send -i " & sPath &/ "findfiles.png Findfiles " & Chr(34) & "Charlie Ogier software (c) 2015" & Chr(34)
+Shell sNotify
+
+End
+
+Public Sub Timer2_Timer()
+
+Inc siTimer2Count
+
+If siTimer2Count = 5 Then 
+  TextBoxFind1.SetFocus
+  Timer2.Enabled = False
+  siTimer2Count = 0
+End If
+
+End
+
+Public Sub SetUpSettings()
+
+If IsNull(Settings["CheckBoxHideSystem"]) Then
+  Settings["CheckBoxHideSystem"] = CheckBoxHideSystem.Value
+  Settings["CheckBoxCase"] = CheckBoxCase.Value
+  Settings["CheckBoxHideFiles"] = CheckBoxHideFiles.Value
+  Settings.Save
+End If
+
+CheckBoxHideSystem.Value = Settings["CheckBoxHideSystem"]
+CheckBoxCase.Value = Settings["CheckBoxCase"]
+CheckBoxHideFiles.Value = Settings["CheckBoxHideFiles"]
+
+End
+
+Public Sub SaveSettings()
+
+Settings["CheckBoxHideSystem"] = CheckBoxHideSystem.Value
+Settings["CheckBoxCase"] = CheckBoxCase.Value
+Settings["CheckBoxHideFiles"] = CheckBoxHideFiles.Value
+Settings.Save
+
+End
+
+Public Sub TextBoxFind1_GotFocus()
+
+Timer2.enabled = False
+
+End
+
+Public Sub TextBoxFind1_LostFocus()
+
+siTimer2Count = 0
+Timer2.enabled = True
+
+End
+
+Public Sub TextBoxFind2_GotFocus()
+
+Timer2.enabled = False
+
+End
+
+Public Sub TextBoxFind2_LostFocus()
+
+siTimer2Count = 0
+Timer2.enabled = True
+
+End
+
+Public Sub ButtonUpdate_Click()
+
+LogTheFiles
+LoadFilesData
+ButtonUpdate.Visible = False
+SearchTheData
+
+End
+
+Public Sub Buttonhelp_Click()
+
+FFHelp.ShowModal
+TextBoxFind1.SetFocus
+
+End
+
+Public Sub ButtonExit_Click()
+
+Me.Hide
+bExitDelay = True
+
+End

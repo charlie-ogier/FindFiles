@@ -1,0 +1,57 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,106,53)
+  Text = ("FindFiles")
+  Icon = Picture["findfiles.png"]
+  Arrangement = Arrange.Vertical
+  { Panel2 Panel
+    MoveScaled(0,0,59,33)
+    Expand = True
+    Arrangement = Arrange.Horizontal
+    Padding = 5
+    { TextArea1 TextArea
+      MoveScaled(1,0,55,30)
+      Expand = True
+      Text = ("FindFiles is designed to quickly locate your files.\n\nIf you know you have a file that has \"shop\" and \"week\" in it but can't remember its exact name then place \"shop\" in the 1st search box and \"week\" in the 2nd, press [Enter] to search and, should the file exist, you will locate \".../Documents/weeklyshoppingcosts.ods\"\n\nWhen you first start the program (or enter a search containing no data) the program will show all files that match the checkbox settings. The default at startup is to show all your home directory files except the hidden files which is why there are more logged files than files that match the search.\n\nTo locate your files enter a search string in the left hand textbox (e.g.  documents ) and click \"Search\" or press the [Enter] key. To search within the data entered in the previous instruction enter text in right hand textbox (e.g.  .odt )  and click \"Search\" or press the [Enter] key. You can, of course, fill both boxes before starting the search, do not use wild cards.\n\nThe search will show up to the first 10 files. You can use the mouse wheel or the scroll bar to show more files. [Page up] and [Page down] can also be used. Pressing [Alt] will highlight the othert shortcut keys (e.g. [Alt] + h will show/hide hidden files)\n\nIf the \"Case sensitive\"  checkbox is unchecked files named with either case will be found. e.g. \"DelEtE\" will find \"Delete\". If the option is selected case will be sensitive.\n\nTo search for hidden files check the \"Show hidden files\" checkbox. \n\nTo search system files check \"Show system files\" checkbox. This will also show other mounted drives e.g. a USB stick or a CD (You will need to click \"Update\" if the media is inserted after FindFiles has been opened, see \"Update\" below). If you need to see every file on your system you will need to run this program with sudo or from a root prompt (AT YOUR OWN RISK).\n\nThe \"Database update\" button will upload the latest database, this is created in the background. You may need to do this TWICE to see very recent changes, make a note of the times and dates of updates shown in the \"Tooltips\" while the mouse hovers over the \"Database update\" button.\n\nYou can double click on a file to open it. Not all files will open, but if your system is aware of the file type it should work, clicking on a directory will open your file manager.\n\nThe properties on the file will be displayed if the mouse is held over the file name. \n\nRight clicking on a file or directory will give you the option to open either the file manager or terminal in the directory the file resides.\n\nLogging times can vary dramatically. The first time might take over 60 seconds. \n\nThe program will remember the checkbox settings between sessions. \n\nTo completely remove the program you will need to also delete ~/.FFdatabase directory and the file ~/.config/gambas3/FindFiles.conf\n\nFindFiles is written in Gambas\nSpecial thanks to the forum users at whiteislandsoftware.com for their help in creating better code.\nFindfiles icon by Everaldo Coelho found at www.iconfinder.com\n\nCopyright (C) 2013 & 2014 & 2015 Charlie Ogier (bugs@cogier.com)\nThis program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\nThis program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.\nA copy of the GNU General Public License is available at <http://www.gnu.org/licenses/>.")
+      ReadOnly = True
+      Wrap = True
+    }
+  }
+  { HBox1 HBox
+    MoveScaled(1,34,52,6)
+    Padding = 2
+    { Panel3 Panel
+      MoveScaled(0,1,1,2)
+    }
+    { PictureBox1 PictureBox
+      MoveScaled(1,0,9,6)
+      Picture = Picture["Guernsey Flag 26k.jpg"]
+      Stretch = True
+    }
+    { Panel1 Panel
+      MoveScaled(11,1,2,4)
+      Expand = True
+    }
+    { LabelVersion Label
+      MoveScaled(15,1,12,4)
+      Alignment = Align.Center
+    }
+    { Panel6 Panel
+      MoveScaled(30,1,2,4)
+      Expand = True
+    }
+    { Panel4 VBox
+      MoveScaled(37,1,12,6)
+      { Panel5 Panel
+        MoveScaled(1,1,7,1)
+        Expand = True
+      }
+      { ButtonDone Button
+        MoveScaled(1,2,11,3.7143)
+        Text = Shortcut(("Done"), "D")
+        Picture = Picture["door_in.png"]
+      }
+    }
+  }
+}

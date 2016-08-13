@@ -1,0 +1,25 @@
+# Gambas Project File 3.0
+# Compiled with Gambas 3.8.4
+Title=FindFiles
+Startup=FMain
+Icon=findfiles.png
+Version=2.0.26
+Component=gb.image
+Component=gb.gui
+Component=gb.form
+Component=gb.settings
+Description="FindFiles is designed to quickly locate your files"
+Authors="Charlie Ogier"
+TabSize=2
+Language=en_GB
+CreateShortcut=1
+Maintainer=Charlie Ogier
+Address=bugs@cogier.com
+Url=www.cogier.com
+License=General Public License
+PackageName=findfiles-2.0.5
+Packager=1
+Systems=ubuntu
+Menus=ubuntu:"Applications/System/Administration"
+Categories=ubuntu:"System;Utility"
+Groups=ubuntu:"utils"
