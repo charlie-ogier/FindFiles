@@ -108,6 +108,7 @@
     { ButtonUpdate Button
       MoveScaled(43,0,23,3)
       Visible = False
+      Text = Shortcut(("Database update"), "D")
       Picture = Picture["database_refresh.png"]
     }
     { LabelShowing Label

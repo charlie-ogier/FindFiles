@@ -37,12 +37,19 @@ Geometry=[734,25,630,458]
 [Executable]
 Path="FindFiles.gambas"
 
+[FCommit]
+LastCommit="Now includes form data\n---- This line and the following will be ignored ----\n\nA       .action\nA       .action/Untitled Document\nA       .directory\nA       .gambas\nA       .gambas/FFHELP\nA       .gambas/FMAIN\nA       .gitignore\nA       .hidden\nA       .hidden/CHANGELOG\nA       .icon.png\nA       .lang\nA       .lang/Untitled Document\nA       .project\nA       .settings\nA       .src\nA       .src/FFHelp.class\nA       .src/FFHelp.form\nA       .src/FMain.class\nA       .src/FMain.form\nA       .startup"
+
 [OpenFile]
 File[1]=".src/FMain.form"
 Active=1
 File[2]=".src/FMain.class:0.425"
 Count=3
 File[3]=".hidden/CHANGELOG:0.0"
+
+[VersionControl]
+User="charlie-ogier"
+RememberPassword=1
 
 [Watches]
 Count=0
